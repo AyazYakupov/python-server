@@ -3,24 +3,24 @@ import json
 from dbs import workconnect
 from uhd_api import request_processing
 
-user = {'Login': 'Ayaz', 'Password': '1111'}
+# user = {'Login': 'admin', 'Password': 'admin'}
 
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 
 channel.queue_declare(queue='hello')
 
-types = ['select', 'insert', 'update', 'create', 'delete']
+types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
-    rights = workconnect.execute(f"select u.username, u.password_hash from \"user\" u where "
-                                 f"u.username='{data['user']['Login']}' and u.password_hash='{data['user']['Password']}'")
+    rights = workconnect.execute(f"select u.login, u.password from users u where "
+                                 f"u.login='{data['user']['Login']}' and u.password='{data['user']['Password']}'")
     if rights.fetchone():
         request_type = data['request_type'].lower()
         if request_type in types:
             ind = types.index(request_type)
-            return request_processing(data['request'], types[ind])
+            return request_processing(data, types[ind], )
         else:
             return {'result': 'False', 'reason': 'request type is not correct'}
     else:
