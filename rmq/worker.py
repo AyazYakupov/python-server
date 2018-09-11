@@ -14,17 +14,17 @@ types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
-    rights = workconnect.execute(f"select u.login, u.password from users u where "
-                                 f"u.login='{data['user']['Login']}' and u.password='{data['user']['Password']}'")
+    rights = workconnect.execute(f"select s.session from session s where "
+                                 f"s.session='{data['sessionId']}'")
     if rights.fetchone():
-        request_type = data['request_type'].lower()
+        request_type = data['Query'].lower()
         if request_type in types:
             ind = types.index(request_type)
             return request_processing(data, types[ind], )
         else:
-            return {'result': 'False', 'reason': 'request type is not correct'}
+            return {'result': 'False', 'reason': 'Query is not correct'}
     else:
-        return {'result': 'False', 'reason': 'login or password is not correct'}
+        return {'result': 'False', 'reason': 'session is not exist'}
 
 
 def on_request(ch, method, props, body):
@@ -32,7 +32,7 @@ def on_request(ch, method, props, body):
     result = check_request(data)
     ch.basic_publish(exchange='', routing_key=props.reply_to,
                      properties=pika.BasicProperties(correlation_id=props.correlation_id),
-                     body=json.dumps(result))
+                     body=result)
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
