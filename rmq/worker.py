@@ -20,17 +20,20 @@ types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
-    rights = workconnect.execute(f"select u.login, u.password from users u where "
-                                 f"u.login='{data['user']['Login']}' and u.password='{data['user']['Password']}'")
-    if rights.fetchone():
-        request_type = data['Query'].lower()
-        if request_type in types:
-            ind = types.index(request_type)
+    request_type = data['Query'].lower()
+    if request_type in types:
+        ind = types.index(request_type)
+        if request_type == 'auth':
             return request_processing(data, types[ind], )
         else:
-            return {'result': 'False', 'reason': 'request type is not correct'}
+            rights = workconnect.execute(f"select s.session from session s where "
+                                         f"s.session='{data['SessionId']}'")
+            if rights.fetchone():
+                return request_processing(data, types[ind], )
+            else:
+                return {'Result': 'False', 'reason': 'session is not exist'}
     else:
-        return {'result': 'False', 'reason': 'login or password is not correct'}
+        return {'Result': 'False', 'reason': 'Query is not correct'}
 
 
 def on_request(ch, method, props, body):
@@ -38,7 +41,7 @@ def on_request(ch, method, props, body):
     result = check_request(data)
     ch.basic_publish(exchange='', routing_key=props.reply_to,
                      properties=pika.BasicProperties(correlation_id=props.correlation_id),
-                     body=json.dumps(result))
+                     body=result)
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
