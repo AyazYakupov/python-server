@@ -4,8 +4,14 @@ from dbs import workconnect
 from uhd_api import request_processing
 
 # user = {'Login': 'admin', 'Password': 'admin'}
+host = '192.168.88.88'
+isSSL = 'false'
+login = 'test'
+passwd = 'test'
+port = 5672
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+credentials = pika.PlainCredentials(username=login, password=passwd)
+connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
 channel = connection.channel()
 
 channel.queue_declare(queue='hello')
@@ -17,7 +23,7 @@ def check_request(data):
     rights = workconnect.execute(f"select u.login, u.password from users u where "
                                  f"u.login='{data['user']['Login']}' and u.password='{data['user']['Password']}'")
     if rights.fetchone():
-        request_type = data['request_type'].lower()
+        request_type = data['Query'].lower()
         if request_type in types:
             ind = types.index(request_type)
             return request_processing(data, types[ind], )

@@ -7,9 +7,11 @@ par = "'"
 def uhd_auth(data):
     login = data['user']['Login']
     password = data['user']['Password']
-    request_data = (f"select c.cmname form, c.cmroute route from components c, comp_permissions p, users u "
+    sessionId = data['sessionId']
+    forms_data = (f"select c.cmname form, c.cmroute route from components c, comp_permissions p, users u "
                     f"where c.cm_id=p.cm_cm_id and p.u_u_id=u.u_id and u.login='{login}' and u.password='{password}'")
-    return request_exec(request_data, connection=dbs['working'])
+    # sessions_data = (f"-- insert into session ")
+    return request_exec(forms_data, connection=dbs['working'])
 
 
 def uhd_create(data):
