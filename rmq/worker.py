@@ -14,17 +14,20 @@ types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
-    rights = workconnect.execute(f"select s.session from session s where "
-                                 f"s.session='{data['sessionId']}'")
-    if rights.fetchone():
-        request_type = data['Query'].lower()
-        if request_type in types:
-            ind = types.index(request_type)
+    request_type = data['Query'].lower()
+    if request_type in types:
+        ind = types.index(request_type)
+        if request_type == 'auth':
             return request_processing(data, types[ind], )
         else:
-            return {'result': 'False', 'reason': 'Query is not correct'}
+            rights = workconnect.execute(f"select s.session from session s where "
+                                         f"s.session='{data['SessionId']}'")
+            if rights.fetchone():
+                return request_processing(data, types[ind], )
+            else:
+                return {'Result': 'False', 'reason': 'session is not exist'}
     else:
-        return {'result': 'False', 'reason': 'session is not exist'}
+        return {'Result': 'False', 'reason': 'Query is not correct'}
 
 
 def on_request(ch, method, props, body):
