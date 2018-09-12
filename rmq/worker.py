@@ -4,8 +4,14 @@ from dbs import workconnect
 from uhd_api import request_processing
 
 # user = {'Login': 'admin', 'Password': 'admin'}
+host = '192.168.88.88'
+isSSL = 'false'
+login = 'test'
+passwd = 'test'
+port = 5672
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+credentials = pika.PlainCredentials(username=login, password=passwd)
+connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
 channel = connection.channel()
 
 channel.queue_declare(queue='hello')
