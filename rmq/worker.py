@@ -16,7 +16,7 @@ channel = connection.channel()
 
 channel.queue_declare(queue='hello')
 
-types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
+types = ['select', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
@@ -26,19 +26,20 @@ def check_request(data):
         if request_type == 'auth':
             return request_processing(data, types[ind], )
         else:
-            rights = workconnect.execute(f"select s.session from session s where "
-                                         f"s.session='{data['SessionId']}'")
-            if rights.fetchone():
-                return request_processing(data, types[ind], )
-            else:
-                return {'Result': 'False', 'reason': 'session is not exist'}
+            # rights = workconnect.execute(f"select s.session from session s where "
+            #                              f"s.session='{data['SessionId']}'")
+            # if rights.fetchone():
+            return request_processing(data, types[ind], )
+            # else:
+            #     return {'Result': 'False', 'reason': 'session is not exist'}
     else:
-        return {'Result': 'False', 'reason': 'Query is not correct'}
+        return {'Result': 'False', 'reason': 'Query is not correct', data['Data']['ObjectType']: {'Data': []}}
 
 
 def on_request(ch, method, props, body):
     data = json.loads(body.decode('utf-8'))
     result = check_request(data)
+    print(result)
     ch.basic_publish(exchange='', routing_key=props.reply_to,
                      properties=pika.BasicProperties(correlation_id=props.correlation_id),
                      body=result)
