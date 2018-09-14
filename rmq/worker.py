@@ -17,7 +17,7 @@ channel = connection.channel()
 
 channel.queue_declare(queue='hello')
 
-types = ['select', 'insert', 'update', 'create', 'delete', 'auth']
+types = ['select', 'update', 'create', 'delete', 'auth']
 
 
 def check_request(data):
@@ -34,7 +34,7 @@ def check_request(data):
             # else:
             #     return {'Result': 'False', 'reason': 'session is not exist'}
     else:
-        return {'Result': 'False', 'reason': 'Query is not correct'}
+        return {'Result': 'False', 'reason': 'Query is not correct', data['Data']['ObjectType']: {'Data': []}}
 
 
 def on_request(ch, method, props, body):
