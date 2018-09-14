@@ -2,6 +2,7 @@ from dbs import dbs
 from sqlalchemy.exc import *
 from uuid import UUID
 import json
+from datetime import datetime
 
 sample = "{'Query': 'AUTH', 'SessionId': '16e92264-da94-4267-8144-f94f3aac5c57', 'Data': {'Login': 'admin', 'Password': 'admin'}}"
 
@@ -10,6 +11,8 @@ class UUIDEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, UUID):
             return obj.hex
+        if isinstance(obj, datetime):
+            return str(obj)
         return json.JSONEncoder.default(self, obj)
 
 
@@ -21,7 +24,7 @@ def uhd_auth(data):
     password = data['Data']['Password']
     session = data.get('SessionId')
     user_request = (
-        f"select u.patronymic Patronymic, u.surname Surname, u.u_id UserId from users u where u.login='{login}' and u.password='{password}'")
+        f"select u.patronymic Patronymic, u.surname Surname, u.firstname, u.u_id UserId from users u where u.login='{login}' and u.password='{password}'")
     response = request_exec(user_request, dbs['working'])
     if response['Data']:
         user_id = response['Data'][0]['userid']
@@ -36,14 +39,18 @@ def uhd_auth(data):
             sess_update_request = (f"update session set session = '{session}' where s_id='{s_id}' returning s_id")
             sess_update_response = request_exec(sess_update_request, dbs['working'])
             response['Data'][0]['AllowedForms'] = form_data['Data']
-            response['Data'][0]['NewSessionId'] = sess_update_response['Data'][0]['s_id']
+            response['Data'][0]['NewSessionID'] = sess_update_response['Data'][0]['s_id']
+            response['Data'][0]['ForbiddenElements'] = []
+            response['Data'][0]['Roles'] = []
             response['Data'] = response['Data'][0]
             return response
         sess_insert_request = (
             f"insert into session (u_u_id, session) values ('{user_id}', '{session}') returning s_id")
         sess_data = request_exec(sess_insert_request, dbs['working'])
         response['Data'][0]['AllowedForms'] = form_data['Data']
-        response['Data'][0]['NewSessionId'] = sess_data['Data'][0]['s_id']
+        response['Data'][0]['NewSessionID'] = sess_data['Data'][0]['s_id']
+        response['Data'][0]['ForbiddenElements'] = []
+        response['Data'][0]['Roles'] = []
         response['Data'] = response['Data'][0]
         return response
 
@@ -53,7 +60,7 @@ def uhd_create(data):
     if request_data.split()[0].lower() == 'create':
         return request_exec(request_data, connection=dbs[data['Database']])
     else:
-        return {'result': 'False', 'reason': 'request type and data command are not the same'}
+        return {'Result': 'False', 'reason': 'request type and data command are not the same'}
 
 
 def uhd_insert(data):
@@ -64,7 +71,7 @@ def uhd_insert(data):
                    f"values ('{f'{par}, {par}'.join([value for key,value in sorted(request_data['fields'].items())])}') "
                    f"returning {request_data['prefixId']}")
     except KeyError as e:
-        return {'result': 'False', 'reason': f'unfilled request body field: {e}'}
+        return {'Result': 'False', 'reason': f'unfilled request body field: {e}'}
     else:
         return request_exec(request, connection=dbs[data['Database']])
 

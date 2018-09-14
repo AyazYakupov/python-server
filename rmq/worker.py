@@ -10,8 +10,9 @@ login = 'test'
 passwd = 'test'
 port = 5672
 
-credentials = pika.PlainCredentials(username=login, password=passwd)
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
+# credentials = pika.PlainCredentials(username=login, password=passwd)
+# connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 
 channel.queue_declare(queue='hello')
@@ -26,12 +27,12 @@ def check_request(data):
         if request_type == 'auth':
             return request_processing(data, types[ind], )
         else:
-            rights = workconnect.execute(f"select s.session from session s where "
-                                         f"s.session='{data['SessionId']}'")
-            if rights.fetchone():
-                return request_processing(data, types[ind], )
-            else:
-                return {'Result': 'False', 'reason': 'session is not exist'}
+            # rights = workconnect.execute(f"select s.session from session s where "
+            #                              f"s.session='{data['SessionId']}'")
+            # if rights.fetchone():
+            return request_processing(data, types[ind], )
+            # else:
+            #     return {'Result': 'False', 'reason': 'session is not exist'}
     else:
         return {'Result': 'False', 'reason': 'Query is not correct'}
 
@@ -39,6 +40,7 @@ def check_request(data):
 def on_request(ch, method, props, body):
     data = json.loads(body.decode('utf-8'))
     result = check_request(data)
+    print(result)
     ch.basic_publish(exchange='', routing_key=props.reply_to,
                      properties=pika.BasicProperties(correlation_id=props.correlation_id),
                      body=result)
