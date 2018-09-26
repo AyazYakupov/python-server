@@ -1,6 +1,7 @@
 from dbs import dbs
 from sqlalchemy.exc import *
 from uuid import UUID
+import uuid
 from datetime import datetime
 import sqlalchemy
 import json
@@ -22,7 +23,8 @@ par = "'"
 def uhd_auth(data):
     login = data['Data']['Login']
     password = data['Data']['Password']
-    session = data.get('SessionId')
+    session = uuid.uuid4()
+    # session = data.get('SessionId')
     user_request = (
         f"select u.patronymic Patronymic, u.surname Surname, u.firstname, u.u_id UserId from users u where u.login='{login}' and u.password='{password}'")
     response = request_exec(user_request, dbs['working'])
@@ -39,7 +41,8 @@ def uhd_auth(data):
             sess_update_request = (f"update session set session = '{session}' where s_id='{s_id}' returning s_id")
             sess_update_response = request_exec(sess_update_request, dbs['working'])
             response['Data'][0]['AllowedForms'] = form_data['Data']
-            response['Data'][0]['NewSessionID'] = sess_update_response['Data'][0]['s_id']
+            # response['Data'][0]['NewSessionID'] = sess_update_response['Data'][0]['s_id']
+            response['Data'][0]['NewSessionID'] = session
             response['Data'][0]['ForbiddenElements'] = []
             response['Data'][0]['Roles'] = []
             response['Data'] = response['Data'][0]
@@ -141,7 +144,7 @@ def request_exec(request, connection=dbs['ontology'], objectType=None, sessionId
                     result['Result'] = 'True'
                     return result
             else:
-                return {'Result': 'False', 'reason': 'No objects found', objectType: {'Data': []}}
+                return {'Result': 'True', 'reason': 'No objects found', objectType: {'Data': []}}
     else:
         return {'Result': 'False', 'reason': 'select request does not have str type'}
 
