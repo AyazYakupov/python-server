@@ -4,18 +4,37 @@ from uuid import UUID
 from datetime import datetime
 import sqlalchemy
 import json
+import decimal
 
 
 class UUIDEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, UUID):
             return obj.hex
-        if isinstance(obj, datetime):
+        elif isinstance(obj, datetime):
             return str(obj)
+        elif isinstance(obj, decimal.Decimal):
+            print(obj)
+            return str(obj)
+            # return (str(obj) for o in [o])
         return json.JSONEncoder.default(self, obj)
 
 
 par = "'"
+
+
+def uhd_query(data):
+    request_data = data['Data']
+    print('called')
+    try:
+        request = (f"select * from {request_data['ObjectType']}")
+    except KeyError as e:
+        return {'Result': 'False', 'reason': f'unfilled request body field: {e}', 'SessionId': data['SessionId']}
+    else:
+        dt = request_exec(request, connection=dbs[request_data['Database']], objectType=request_data['ObjectType'],
+                          sessionId=data['SessionId'])
+        # dt['ObjectId'] = dt[request_data['ObjectType']]['Data'][0]['uuid']
+        return dt
 
 
 def uhd_auth(data):
@@ -28,8 +47,8 @@ def uhd_auth(data):
     if response['Data']:
         user_id = response['Data'][0]['userid']
         form_request = (
-            f"select c.cmname form, c.cmroute route from components c, comp_permissions p "
-            f"where c.cm_id=p.cm_cm_id and p.u_u_id='{user_id}'")
+            f"select c.cmname form, c.cmroute route from components c")
+        # f"where c.cm_id=p.cm_cm_id and p.u_u_id='{user_id}'")
         form_data = request_exec(form_request, dbs['working'])
         sess_exist_request = (f"select s.s_id from session s where s.u_u_id='{user_id}'")
         sess_data = request_exec(sess_exist_request, dbs['working'])
@@ -42,6 +61,9 @@ def uhd_auth(data):
             response['Data'][0]['ForbiddenElements'] = []
             response['Data'][0]['Roles'] = []
             response['Data'] = response['Data'][0]
+            response['IsActive'] = True
+
+            # response['Data']['UserId'] = user_id
             return response
         sess_insert_request = (
             f"insert into session (u_u_id, session) values ('{user_id}', '{session}') returning s_id")
@@ -133,18 +155,19 @@ def request_exec(request, connection=dbs['ontology'], objectType=None, sessionId
         else:
             if result['Data']:
                 if objectType:
-                    return {'Result': 'True', objectType: result, 'SessionId': sessionId}
+                    return {'Result': 'True', objectType.upper(): result, 'SessionId': sessionId}
                 else:
                     result['Result'] = 'True'
                     return result
             else:
-                return {'Result': 'False', 'reason': 'No objects found', objectType: {'Data': []}}
+                return {'Result': 'False', 'reason': 'No objects found', objectType: {'Data': []},
+                        'SessionId': sessionId}
     else:
         return {'Result': 'False', 'reason': 'select request does not have str type'}
 
 
 func_hub = {'create': uhd_insert, 'update': uhd_update, 'insert': uhd_insert, 'delete': uhd_delete,
-            'select': uhd_select, 'auth': uhd_auth}
+            'select': uhd_select, 'auth': uhd_auth, 'query': uhd_query}
 
 
 def request_processing(data, command):
