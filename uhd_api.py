@@ -1,10 +1,12 @@
 from dbs import dbs
 from sqlalchemy.exc import *
 from uuid import UUID
+import uuid
 from datetime import datetime
 import sqlalchemy
 import json
 import decimal
+from datetime import datetime
 
 
 class UUIDEncoder(json.JSONEncoder):
@@ -40,7 +42,8 @@ def uhd_query(data):
 def uhd_auth(data):
     login = data['Data']['Login']
     password = data['Data']['Password']
-    session = data.get('SessionId')
+    session = uuid.uuid4()
+    # session = data.get('SessionId')
     user_request = (
         f"select u.patronymic Patronymic, u.surname Surname, u.firstname, u.u_id UserId from users u where u.login='{login}' and u.password='{password}'")
     response = request_exec(user_request, dbs['working'])
@@ -57,7 +60,8 @@ def uhd_auth(data):
             sess_update_request = (f"update session set session = '{session}' where s_id='{s_id}' returning s_id")
             sess_update_response = request_exec(sess_update_request, dbs['working'])
             response['Data'][0]['AllowedForms'] = form_data['Data']
-            response['Data'][0]['NewSessionID'] = sess_update_response['Data'][0]['s_id']
+            # response['Data'][0]['NewSessionID'] = sess_update_response['Data'][0]['s_id']
+            response['Data'][0]['NewSessionID'] = session
             response['Data'][0]['ForbiddenElements'] = []
             response['Data'][0]['Roles'] = []
             response['Data'] = response['Data'][0]
@@ -70,6 +74,8 @@ def uhd_auth(data):
         sess_data = request_exec(sess_insert_request, dbs['working'])
         response['Data'][0]['AllowedForms'] = form_data['Data']
         response['Data'][0]['NewSessionID'] = sess_data['Data'][0]['s_id']
+        response['Data'][0]['ForbiddenElements'] = []
+        response['Data'][0]['Roles'] = []
         response['Data'] = response['Data'][0]
         return response
 
@@ -79,7 +85,7 @@ def uhd_create(data):
     if request_data.split()[0].lower() == 'create':
         return request_exec(request_data, connection=dbs[data['Database']])
     else:
-        return {'result': 'False', 'reason': 'request type and data command are not the same'}
+        return {'Result': 'False', 'reason': 'request type and data command are not the same'}
 
 
 def uhd_insert(data):
@@ -91,7 +97,7 @@ def uhd_insert(data):
                    f"values ('{f'{par}, {par}'.join([value for key,value in sorted(request_data['Content'].items()) if value])}') "
                    f"returning {request_data['PrefixId']}")
     except KeyError as e:
-        return {'result': 'False', 'reason': f'unfilled request body field: {e}'}
+        return {'Result': 'False', 'reason': f'unfilled request body field: {e}'}
     else:
         dt = request_exec(request, connection=dbs[request_data['Database']], objectType=request_data['ObjectType'],
                           sessionId=data['SessionId'])
@@ -105,7 +111,7 @@ def uhd_update(data):
     try:
         request = (f"update {request_data['ObjectType']} set "
                    f"({', '.join([key for key, value in sorted(request_data['Content'].items())])}) "
-                   f"= ('{f'{par}, {par}'.join([value for key,value in sorted(request_data['Content'].items())])}') "
+                   f"= (ROW('{f'{par}), ROW({par}'.join([value for key,value in sorted(request_data['Content'].items())])}')) "
                    f"where {request_data['PrefixId']}='{request_data['ObjectId']}'"
                    f"returning {request_data['PrefixId']}")
     except KeyError as e:

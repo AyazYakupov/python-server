@@ -10,8 +10,9 @@ login = 'test'
 passwd = 'test'
 port = 5672
 
-credentials = pika.PlainCredentials(username=login, password=passwd)
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
+# credentials = pika.PlainCredentials(username=login, password=passwd)
+# connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 
 channel.queue_declare(queue='helloIn')
